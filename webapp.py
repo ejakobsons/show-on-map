@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import re
+import sys
 import unicodedata
 from urllib.parse import urljoin
 
@@ -12,8 +13,6 @@ from flask import Flask, render_template, send_from_directory
 from flask_bootstrap import Bootstrap
 from flask_socketio import SocketIO
 from openai import AzureOpenAI
-
-logging.basicConfig(format="%(asctime)s %(levelname)s: %(message)s", level=logging.INFO)
 
 load_dotenv()
 # Bing Maps API endpoint and token for geocoding
@@ -28,6 +27,11 @@ app = Flask(__name__, static_url_path="/static")
 app.config["SECRET_KEY"] = os.environ.get("APPSETTING_FLASK_SECRET_KEY")
 bootstrap = Bootstrap(app)
 socketio = SocketIO(app, async_mode="threading")
+
+stream_handler = logging.StreamHandler(sys.stdout)
+stream_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s: %(message)s"))
+stream_handler.setLevel(logging.INFO)
+app.logger.addHandler(stream_handler)
 
 
 @app.route("/")
