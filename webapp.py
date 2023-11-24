@@ -30,8 +30,9 @@ socketio = SocketIO(app, async_mode="threading")
 
 stream_handler = logging.StreamHandler(sys.stdout)
 stream_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s: %(message)s"))
-stream_handler.setLevel(logging.INFO)
-app.logger.addHandler(stream_handler)
+app.logger.handlers = [stream_handler]
+app.logger.setLevel(logging.INFO)
+app.logger.info("========== Starting app ==========")
 
 
 @app.route("/")
@@ -42,7 +43,7 @@ def index():
 @socketio.on("get_locations")
 def get_locations(data):
     url = data["url"]
-    logging.info(f"Requested URL: {url}")
+    app.logger.info(f"Requested URL: {url}")
     socketio.start_background_task(target=load_pages, url=url, max_pages=10)
 
 
@@ -67,7 +68,7 @@ def load_pages(url, max_pages=10):
                 lat_lon["title"] = a["title"]
                 location_list.append(lat_lon)
 
-        logging.info(f"Found {len(address_list)} addresses")
+        app.logger.info(f"Found {len(address_list)} addresses")
         socketio.emit(
             "progress",
             {"addresses": address_list, "locations": location_list},
@@ -75,9 +76,9 @@ def load_pages(url, max_pages=10):
 
         if next_url is None or i == max_pages - 1:
             break
-        logging.info(f"Next URL: {next_url}")
+        app.logger.info(f"Next URL: {next_url}")
         url = next_url
-    logging.info("Finished")
+    app.logger.info("Finished")
 
 
 def scrape_text(url):
@@ -127,7 +128,7 @@ Remember: you must find all addresses and the output must be valid JSON!
         temperature=0.3,
     )
     content = response.choices[0].message.content + "]"
-    logging.info(response.usage)
+    app.logger.info(response.usage)
     content = repair_json(content)
     addresses = json.loads(content)
 
@@ -171,4 +172,4 @@ def strip_accents(text):
 
 
 if __name__ == "__main__":
-    socketio.run(app, debug=True)
+    socketio.run(app, debug=False)
