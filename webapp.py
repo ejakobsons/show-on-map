@@ -17,15 +17,15 @@ logging.basicConfig(format="%(asctime)s %(levelname)s: %(message)s", level=loggi
 
 load_dotenv()
 # Bing Maps API endpoint and token for geocoding
-BING_MAPS_API_ENDPOINT = os.getenv("BING_MAPS_API_ENDPOINT")
-BING_MAPS_API_KEY = os.getenv("BING_MAPS_API_KEY")
+BING_MAPS_API_ENDPOINT = os.getenv("APPSETTING_BING_MAPS_API_ENDPOINT")
+BING_MAPS_API_KEY = os.getenv("APPSETTING_BING_MAPS_API_KEY")
 # Azure OpenAI endpoint and key for address extraction
-AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
-AZURE_OPENAI_DEPLOYMENT = os.getenv("AZURE_OPENAI_DEPLOYMENT")
-AZURE_OPENAI_KEY = os.getenv("AZURE_OPENAI_KEY")
+AZURE_OPENAI_ENDPOINT = os.getenv("APPSETTING_AZURE_OPENAI_ENDPOINT")
+AZURE_OPENAI_DEPLOYMENT = os.getenv("APPSETTING_AZURE_OPENAI_DEPLOYMENT")
+AZURE_OPENAI_KEY = os.getenv("APPSETTING_AZURE_OPENAI_KEY")
 
 app = Flask(__name__, static_url_path="/static")
-app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY")
+app.config["SECRET_KEY"] = os.environ.get("APPSETTING_FLASK_SECRET_KEY")
 bootstrap = Bootstrap(app)
 socketio = SocketIO(app, async_mode="threading")
 
