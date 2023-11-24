@@ -24,8 +24,8 @@ AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
 AZURE_OPENAI_DEPLOYMENT = os.getenv("AZURE_OPENAI_DEPLOYMENT")
 AZURE_OPENAI_KEY = os.getenv("AZURE_OPENAI_KEY")
 
-
 app = Flask(__name__, static_url_path="/static")
+app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY")
 bootstrap = Bootstrap(app)
 socketio = SocketIO(app, async_mode="threading")
 
