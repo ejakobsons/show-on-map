@@ -9,9 +9,8 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
-from flask import Flask, render_template, send_from_directory
+from flask import Flask, jsonify, request, render_template, send_from_directory
 from flask_bootstrap import Bootstrap
-from flask_socketio import SocketIO
 from openai import AzureOpenAI
 
 load_dotenv()
@@ -26,7 +25,6 @@ AZURE_OPENAI_KEY = os.getenv("APPSETTING_AZURE_OPENAI_KEY")
 app = Flask(__name__, static_url_path="/static")
 app.config["SECRET_KEY"] = os.environ.get("APPSETTING_FLASK_SECRET_KEY")
 bootstrap = Bootstrap(app)
-socketio = SocketIO(app, async_mode="threading")
 
 stream_handler = logging.StreamHandler(sys.stdout)
 stream_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s: %(message)s"))
@@ -40,11 +38,26 @@ def index():
     return render_template("index.html", BING_MAPS_API_KEY=BING_MAPS_API_KEY)
 
 
-@socketio.on("get_locations")
-def get_locations(data):
-    url = data["url"]
+@app.route("/get_locations", methods=["GET"])
+def get_locations():
+    url = request.args.get("url")
     app.logger.info(f"Requested URL: {url}")
-    socketio.start_background_task(target=load_pages, url=url, max_pages=10)
+
+    text, next_url = scrape_text(url)
+    addresses = extract_addresses(text)
+
+    address_list = []
+    location_list = []
+    for a in addresses:
+        lat_lon = get_lat_lon(a["address"])
+        if lat_lon:
+            address_list.append(a["address"])
+            lat_lon["title"] = a["title"]
+            location_list.append(lat_lon)
+
+    app.logger.info(f"Found {len(address_list)} addresses")
+    app.logger.info(f"Next URL: {next_url}")
+    return jsonify({"addresses": address_list, "locations": location_list, "nextUrl": next_url})
 
 
 @app.route("/favicon.ico")
@@ -52,33 +65,6 @@ def favicon():
     return send_from_directory(
         os.path.join(app.root_path, "static"), "favicon.ico", mimetype="image/vnd.microsoft.icon"
     )
-
-
-def load_pages(url, max_pages=10):
-    for i in range(max_pages):
-        text, next_url = scrape_text(url)
-        addresses = extract_addresses(text)
-
-        address_list = []
-        location_list = []
-        for a in addresses:
-            lat_lon = get_lat_lon(a["address"])
-            if lat_lon:
-                address_list.append(a["address"])
-                lat_lon["title"] = a["title"]
-                location_list.append(lat_lon)
-
-        app.logger.info(f"Found {len(address_list)} addresses")
-        socketio.emit(
-            "progress",
-            {"addresses": address_list, "locations": location_list},
-        )
-
-        if next_url is None or i == max_pages - 1:
-            break
-        app.logger.info(f"Next URL: {next_url}")
-        url = next_url
-    app.logger.info("Finished")
 
 
 def scrape_text(url):
@@ -138,6 +124,7 @@ Remember: you must find all addresses and the output must be valid JSON!
 def repair_json(content):
     # try to close brackets if the the response is truncated
     if not (content == "[]" or content.endswith("}]")):
+        app.logger.warning("Attempting to repair JSON string")
         last_bracket_index = content.rfind("}")
         content = content[: last_bracket_index + 1] + "]" if last_bracket_index != -1 else "[]"
     return content
@@ -172,4 +159,4 @@ def strip_accents(text):
 
 
 if __name__ == "__main__":
-    socketio.run(app, debug=False)
+    app.run(debug=True)
